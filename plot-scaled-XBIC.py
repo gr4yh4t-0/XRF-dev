@@ -45,15 +45,15 @@ def plotXBIC(scans, shaped_dataframes):
 
 
 #make sure 'r' is included to read '\' and '/' correctly
-path = r'C:\Users\Trumann\Desktop\2_xray\1_MAPS_fitted\FS_cross sect csvs'  
+path = r'C:\Users\Trumann\Desktop\XRF-dev'  
 
 #scalar conversion at Sector 2, beamline constant (unless otherwise stated)
 beamconv = 1*10**5          
 
 #define scan and corrosponding electrical hardware settings, Name key will define the title of plot
-scan083 = {'Scan #': '083', 'Name': 'FS Scan 1', 'stanford': 200, 'lockin': 50}
-scan085 = {'Scan #': '085', 'Name': 'FS Scan 2', 'stanford': 500, 'lockin': 100}
-scan087 = {'Scan #': '087', 'Name': 'FS Scan 3', 'stanford': 500, 'lockin': 100}
+scan1 = {'Scan #': '083', 'Name': 'FS Scan 1', 'stanford': 200, 'lockin': 50}
+scan2 = {'Scan #': '085', 'Name': 'FS Scan 2', 'stanford': 500, 'lockin': 100}
+scan3 = {'Scan #': '087', 'Name': 'FS Scan 3', 'stanford': 500, 'lockin': 100}
 
 #enter scan dictionary into list
 scan_dict = [scan083, scan085, scan087]
