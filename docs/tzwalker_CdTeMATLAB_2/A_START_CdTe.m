@@ -3,7 +3,7 @@ clear
 close all
 
 %File Directory
-path  = 'C:\Users\Trumann\Desktop\refit_NBL3\output\';
+path  = '/home/kineticcross/Desktop/XRF-dev/';
 scanlist = {'439' '475' '519' '550'};               %sector 26 scans must be a 3 digit number
 samplename={'TS58A' 'NBL3-3' 'NBL3-1' 'NBL3-2'};    %Corresponding names of samples for each scan
 electtype= {'XBIC' 'XBIC' 'XBIC' 'XBIC'};
@@ -36,13 +36,6 @@ sample = samplename{1, N};
 
 [a, b, c] = CdTe_Absorb(sample, date);              
 WORK.ele_IIO = [a b c];
-
-
-
-%%%SPLIT CD_L AND TE_L CHANNELS ACCORDING TO THE LAYER THICKNESSES
-%%%APPLY REPSECTIVE IIO TO EACH ONE
-
-
 
 %Enter elements to map (number of elements here should equal the number of
 %elements corrected for in Absorb)
@@ -78,9 +71,6 @@ WORK.dwell = round(min(WORK.ERT1.raw));
 WORK.rel_X = WORK.xPixelNo.map*WORK.step*1000; %relative X coordinates in um
 WORK.rel_Y = WORK.yPixelNo.map*WORK.step*1000; %relative Y coordinates in um
 
-
-
-
 %%% XBIC Correction
 %Step 1: convert from counts to nanoamperes
 beamconversion = 100000;                                                        %cts/ V @ Sector 2
@@ -88,21 +78,6 @@ XBIC_scale_factor = ((stanford{N} * 1E-9)  /  (beamconversion * lock_in{N}));   
 
 WORK.XBIC_scale.raw = WORK.ds_ic.raw * XBIC_scale_factor;                       %in amps
 WORK.XBIC_scale.map = WORK.ds_ic.map * XBIC_scale_factor;                       %in amps
-
-%Step 2: divide amps by the attenuation of the absorber layer
-    %cd.raw = WORK.Cd_L.raw/1E6;    %g/cm
-    %te.raw = WORK.Te_L.raw/1E6;
-    
-    %cd.map = WORK.Cd_L.map/1E6;    %g/cm
-    %te.map = WORK.Te_L.map/1E6;
-    
-    %muCd = 165.1;   %cm2/g
-    %muTe = 198.7;   %cm2/g
-    %CdTe_iio.raw = 1 - exp(-cd.raw .*muCd - te.raw .*muTe);
-    %CdTe_iio.map = 1 - exp(-cd.map .*muCd - te.map .*muTe);
-    
-    %WORK.XBIC_scale_attn.raw = WORK.XBIC_scale.raw ./ CdTe_iio.raw;
-    %WORK.XBIC_scale_attn.map = WORK.XBIC_scale.map ./ CdTe_iio.map;
     
     %%%%%extra
     %use if filter 1 in
@@ -134,8 +109,8 @@ WORK.XBIC_collected.map = WORK.XBIC_scale.map .* eh_per_coulomb;                
     
     %WORK.Cu_XBIC.raw = 
 
-%Put the data back into the structure
 xrf.(scanheader) = WORK;
+%%Put the data back into the structure
 
 end
 
