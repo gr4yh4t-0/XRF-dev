@@ -3,12 +3,12 @@ import xraylib as xl
 import numpy as np
 
 path_to_ASCIIs = r'C:\Users\Trumann\Desktop\XRF-dev'
-EOI = ['Sn_L', 'S', 'Cd_L', 'Te_L', 'Cu', 'Zn_L', 'Cl', 'Mo_L']
 
-scan1 = {'Scan #': 439, 'Name': 'TS58A', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500} 
-scan2 = {'Scan #': 475, 'Name': 'NBL3-3', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500}
-scan3 = {'Scan #': 519, 'Name': 'NBL3-1', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500}
-scan4 = {'Scan #': 550, 'Name': 'NBL3-2', 'beam_energy': 8.99, 'stanford': 50000, 'lockin': 100, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500}
+#enter energy in keV, stanford amplifcations in nanoamps, and elements of interest (EOI)
+scan1 = {"sector": 2, 'Scan #': 439, 'Name': 'TS58A', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500, "absorber_Eg": 1.45, 'E_abs': 4359, "EOI": ['Sn_L', 'S', 'Cd_L', 'Te_L', 'Cu', 'Zn_L', 'Cl', 'Mo_L']} 
+scan2 = {"sector": 2, 'Scan #': 475, 'Name': 'NBL3-3', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500, "absorber_Eg": 1.45, 'E_abs': 5680,  "EOI": ['Sn_L', 'S', 'Cd_L', 'Te_L', 'Cu', 'Zn_L', 'Cl', 'Mo_L']}
+scan3 = {"sector": 2, 'Scan #': 519, 'Name': 'NBL3-1', 'beam_energy': 8.99, 'stanford': 200, 'lockin': 20, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500, "absorber_Eg": 1.45, 'E_abs': 4787, "EOI": ['Sn_L', 'S', 'Cd_L', 'Te_L', 'Cu', 'Zn_L', 'Cl', 'Mo_L']}
+scan4 = {"sector": 2, 'Scan #': 550, 'Name': 'NBL3-2', 'beam_energy': 8.99, 'stanford': 50000, 'lockin': 100, 'PIN beam_on': 225100, 'PIN beam_off': 624, 'PIN stanford': 500, "absorber_Eg": 1.45, 'E_abs': 5907, "EOI": ['Sn_L', 'S', 'Cd_L', 'Te_L', 'Cu', 'Zn_L', 'Cl', 'Mo_L']}
 
            
 scan_list = [scan1, scan2, scan3, scan4]
@@ -25,15 +25,19 @@ def noColNameSpaces(pd_csv_df):
 def shrinkASCII(large_ASCII_files):
     smaller_dfs = []
     for scan in large_ASCII_files:
-        csvIn = pd.read_csv(path_to_ASCIIs + r'\combined_ASCII_2idd_0{n}.h5.csv'.format(n = scan['Scan #']), skiprows = 1)
+        if scan["sector"] == 2:
+            file_name = r'\combined_ASCII_2idd_0{n}.h5.csv'.format(n = scan['Scan #'])
+        else:
+            file_name = r'\combined_ASCII_26idbSOFT_0{n}.h5.csv'.format(n = scan['Scan #'])
+        csvIn = pd.read_csv(path_to_ASCIIs + file_name, skiprows = 1)
         noColNameSpaces(csvIn)                                          #removes whitspaces from column headers, for easy access
         shrink1 = csvIn[['x pixel no', 'y pixel no', 'ds_ic']]          #isolates x,y,and electrical columns
-        shrink2 = csvIn[EOI]                                            #isolates element of interest columns
+        shrink2 = csvIn[scan["EOI"]]                                          #isolates element of interest columns
         shrink = pd.concat([shrink1, shrink2], axis=1, sort=False)      #combines these columns into one matrix while maintaining indices
         smaller_dfs.append(shrink)                                      #add smaller matrices to list so they may be iterated over...
     return smaller_dfs
 
-smaller_dfs = shrinkASCII(scan_list)                                    #list containing smaller datframes (considering memory purposes)
+smaller_dfs = shrinkASCII(scan_list)
 
 def generate_scalar_factor(scan_list):
     beamconversion_factor = 100000
@@ -52,10 +56,8 @@ def collect_XBIC(list_of_smaller_dfs):
         df["ds_ic"] = df["ds_ic"].astype(float)                             #reformat column for floating arithmetic operations
         scaled_dsic = df.loc[:,'ds_ic'] * scan['scale factor']              #apply amplifaction settings  (converts counts to amps)
         collected_dsic = scaled_dsic * eh_per_coulomb                       #convert amps to e-h pairs
-        #key = 'num e-h pairs'
-        #scan.setdefault(key, collected_dsic)
         df['ds_ic'] = collected_dsic
-        df.rename(columns = {'ds_ic': 'e-h pairs'})                        
+        df.rename(columns = {'ds_ic': 'eh_pairs'}, inplace = True)                        
     return 
 
 collect_XBIC(smaller_dfs)
@@ -67,15 +69,15 @@ def interpolate_diode_calibration(scans):
     flux_at_12keV = 2728                                                #ph/(s*pA) ; from 2018_07 beam run (12.8keV)
     for scan in scans:
         flux_of_interest = flux_at_8keV + (scan['beam_energy'] - lower_ASU_PIN_energy) * ((flux_at_12keV - flux_at_8keV)/(upper_ASU_PIN_energy-lower_ASU_PIN_energy)) #interpolate at the energy the scan was taken
-        rounded_calib = round(flux_of_interest, 1)
-        key = 'ph/(s*pA)'
-        scan.setdefault(key, rounded_calib)
+        rounded_calib = round(flux_of_interest, 1)                      #keep an integer
+        key = 'ph/(s*pA)'                                               #store fluxx in sample dictionary for easy retrieval
+        scan.setdefault(key, rounded_calib)                             #assign key:value pair
     return 
 
 interpolate_diode_calibration(scan_list)
 
 def get_flux(scans):
-    beamconversion = 100000
+    beamconversion = 100000     
     for scan in scans:
         PIN_current = ((scan['PIN beam_on'] - scan['PIN beam_off'])  /  beamconversion) * (scan["PIN stanford"] *10**-9)
         flux = PIN_current * scan['ph/(s*pA)'] * (1*10**12)
@@ -86,16 +88,31 @@ def get_flux(scans):
 
 get_flux(scan_list)
 
+
+#wanted a function that retrieves the % energy transmitted by any given compound at the given energy
+    #E_abs = 1-%transmitted
+    #absorber_bandgap in scan dictionary (in case you want to parse through different materials)
+    #could include ifelse statements that allow user to set energy conversion factor alpha = 3 or alpha = [refs in JMR paper]
+    #need a database for compound bandgaps and compound xray transmissions as functions of thickness/density 
 # =============================================================================
-# def calc_XCE(scans):
-#     for scan in scans:
-#         C = get_thickness_factor()
-#         XCE = scan['num e-h pairs'] / (C * scan['flux']) * 100
-#         
-#     return
+# def get_thickness_factor(E_abs, bandgap, alpha_Econvrsn_factor):
+#     alpha = 3
+#     E_abs = scan["]
+#     C = E_abs / (bandgap * alpha)               
+#     return C
 # =============================================================================
 
 
+def calc_XCE(smaller_dfs, scans):
+    alpha = 3
+    for df, scan in zip(smaller_dfs, scans):
+        C = scan["E_abs"] / (scan['absorber_Eg'] * alpha)           #calculate correction factor, function of energy absorbed, bandgap, and energy conversion, ideally, get_thickness_factor(energy, absorber_compound, absorber_thickness, abosrber_density) would go here
+        XCE = df['eh_pairs'] / (C * scan['flux']) * 100             #calculate collection efficiency
+        df['eh_pairs'] = XCE                                        #replace df column for ease of use
+        df.rename(columns = {'eh_pairs': 'XCE'}, inplace = True)    #rename to XCE column
+    return
+
+calc_XCE(smaller_dfs, scan_list)
 
 
 
