@@ -1,5 +1,5 @@
 def XBIC_counts_to_amp(scan_list):
-    beamconversion_factor = 10000
+    beamconversion_factor = 100000
     correction_factors = []
     for scan in scan_list:
         correction = ((scan['stanford']*(1*10**-9)) / (beamconversion_factor * scan['lockin'])) #calculate correction factor for chosen scan
